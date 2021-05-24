@@ -21,6 +21,7 @@ app.get('/', (req, res) => {
   res.send('Welcome to PICKNIC back end!');
 });
 
+// I wish this code were more modularized, not all in one file.
 // business profile GET
 app.get('/business/profile', (req, res) => {
   Users.find({ email: req.query.email }, (error, data) => {
@@ -36,23 +37,8 @@ app.get('/business/profile', (req, res) => {
   });
 });
 
-app.get('/yelp', (req, res) => {
-  // for landing page, use location=seattle
-  axios({
-    method: 'get',
-    url: `${process.env.YELP_BUSINESS_ENDPOINT}/search?location=seattle`,
-    headers: {
-      Authorization: `Bearer ${process.env.YELP_API_KEY}`,
-      'content-type': 'application/json'
-    }
-  }).then(response => res.json(response.data.businesses))
-    .catch(error => console.log(error))
-})
-
-// handle search by location and keyword
-app.get('/businesses/search', (req, res) => {
-  const location = req.query.location;
-  const term = req.query.term;
+// The fact that the handlers for /yelp and /businesses/search are so similar makes me want to combine them...
+function getBusinessesAndRespond(location, term, res) {
   axios({
     method: 'get',
     url: `${process.env.YELP_BUSINESS_ENDPOINT}/search?location=${location}&term=${term}`,
@@ -62,6 +48,18 @@ app.get('/businesses/search', (req, res) => {
     }
   }).then(response => res.json(response.data.businesses))
     .catch(error => console.log(error))
+}
+
+app.get('/yelp', (req, res) => {
+  // for landing page, use location=seattle
+  getBusinessesAndRespond('seattle', '', res);
+})
+
+// handle search by location and keyword
+app.get('/businesses/search', (req, res) => {
+  const location = req.query.location;
+  const term = req.query.term;
+  getBusinessesAndRespond(location, term, res);
 })
 
 app.get('/business/:id', (req, res) => {
@@ -122,6 +120,7 @@ app.delete('/business/:id', (req, res) => {
     } else {
       if (data.length === 0) {
         // user not found
+        // nice error handling, and nice commenting
         res.status(400).send(data)
       } else {
         // user found
